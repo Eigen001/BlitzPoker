@@ -163,6 +163,59 @@ body{
 }
 @keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 
+/* ── RANDOM EFFECTS ───────────────────────────────────────────────────────── */
+/* effect text line shown in each player panel */
+.effect-line{
+  display:none;
+  font-size:11px;font-weight:800;letter-spacing:1px;
+  color:#ffcc44;text-transform:uppercase;
+  margin-bottom:2px;text-align:center;
+  text-shadow:0 0 8px rgba(255,200,60,.35);
+}
+#play-screen.multi .effect-line{font-size:10px;}
+
+/* effect draw card + flip animation */
+#effect-slot-cards{position:absolute;top:8px;right:8px;z-index:6;}
+#effect-slot-centre{margin-top:12px;display:flex;justify-content:center;}
+.effect-card{
+  width:66px;height:92px;display:none;
+  -webkit-perspective:600px;perspective:600px;
+}
+.effect-card.show{display:block;animation:effDraw .5s ease-out;}
+@keyframes effDraw{
+  0%{transform:translateY(-44px) scale(.3);opacity:0;}
+  60%{opacity:1;}
+  100%{transform:translateY(0) scale(1);opacity:1;}
+}
+.effect-card-inner{
+  position:relative;width:100%;height:100%;
+  -webkit-transform-style:preserve-3d;transform-style:preserve-3d;
+  -webkit-transition:-webkit-transform .55s;transition:transform .55s;
+  -webkit-transform:rotateY(0deg);transform:rotateY(0deg);
+}
+.effect-card.flipped .effect-card-inner{
+  -webkit-transform:rotateY(180deg);transform:rotateY(180deg);
+}
+.effect-back,.effect-front{
+  position:absolute;inset:0;border-radius:8px;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(0,0,0,.7);
+}
+.effect-back{
+  background:repeating-linear-gradient(45deg,#13321a,#13321a 6px,#0c2412 6px,#0c2412 12px);
+  border:2px solid #ffcc44;color:#ffcc44;font-size:26px;font-weight:900;
+}
+.effect-front{
+  background:#fffbe8;border:2px solid #ffcc44;padding:4px;
+  -webkit-transform:rotateY(180deg);transform:rotateY(180deg);
+}
+.effect-front .ef-icon{font-size:26px;line-height:1;margin-bottom:3px;}
+.effect-front .ef-name{
+  font-size:9px;font-weight:900;letter-spacing:.5px;color:#7a5a00;
+  text-transform:uppercase;text-align:center;line-height:1.05;
+}
+
 /* ── HINT ─────────────────────────────────────────────────────────────────── */
 #hint{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -232,6 +285,7 @@ body{
     <div class="panel-inner">
       <div class="panel-info">
         <div class="p-label" id="plabel1">Player 1</div>
+        <div class="effect-line" id="eff1"></div>
         <div class="hand-row">
           <span class="hand-name" id="topText">—</span>
           <span class="hand-dash" id="topDash" style="display:none"> — </span>
@@ -259,6 +313,7 @@ body{
     <div class="side-panel" id="panel3" style="display:none">
       <div class="side-inner" id="side3-inner">
         <div class="p-label" id="plabel3">Player 3</div>
+        <div class="effect-line" id="eff3"></div>
         <div class="hand-row" style="flex-wrap:nowrap">
           <span class="hand-name" id="p3Text">—</span>
           <span class="hand-dash" id="p3Dash" style="display:none"> — </span>
@@ -279,15 +334,29 @@ body{
     <!-- Cards (2-player) / Centre info (3-4 player) -->
     <div id="cards-wrap">
       <div class="cards" id="cards"></div>
+      <div id="effect-slot-cards"></div>
     </div>
     <div id="centre-info">
       <div id="centre-round">Round 0</div>
+      <div id="effect-slot-centre"></div>
+    </div>
+
+    <!-- Effect draw card (moved between slots by JS) -->
+    <div class="effect-card" id="effectCard">
+      <div class="effect-card-inner">
+        <div class="effect-back">★</div>
+        <div class="effect-front">
+          <div class="ef-icon">⚡</div>
+          <div class="ef-name">EFFECT</div>
+        </div>
+      </div>
     </div>
 
     <!-- P4 right side panel -->
     <div class="side-panel" id="panel4" style="display:none">
       <div class="side-inner" id="side4-inner">
         <div class="p-label" id="plabel4">Player 4</div>
+        <div class="effect-line" id="eff4"></div>
         <div class="hand-row" style="flex-wrap:nowrap">
           <span class="hand-name" id="p4Text">—</span>
           <span class="hand-dash" id="p4Dash" style="display:none"> — </span>
@@ -314,6 +383,7 @@ body{
     <div class="panel-inner">
       <div class="panel-info">
         <div class="p-label" id="plabel2">Player 2</div>
+        <div class="effect-line" id="eff2"></div>
         <div class="hand-row">
           <span class="hand-name" id="botText">—</span>
           <span class="hand-dash" id="botDash" style="display:none"> — </span>
@@ -349,6 +419,10 @@ body{
   <div class="menu-row">
     <button class="menu-btn" id="menuPlayers">👥 No. of Players</button>
     <span class="menu-status" id="playersStatus">2 Players</span>
+  </div>
+  <div class="menu-row">
+    <button class="menu-btn" id="menuEffects">🎴 Random Effects</button>
+    <span class="menu-status" id="effectsStatus">Effects: Off</span>
   </div>
   <div>
     <div class="menu-title" style="margin-bottom:8px">📊 Score Tracker &nbsp;<span class="round-count" id="roundCount">Round: 0</span></div>
@@ -416,13 +490,89 @@ var G = {
   base:[90,90,90,90], rem:[90,90,90,90],
   playerPaused:[false,false,false,false],
   iv:null, running:false,
-  lastHand:null, lastHiSet:null
+  lastHand:null, lastHiSet:null,
+  effectsOn:false, effect:null,
+  carryover:[0,0,0,0],
+  tickSpeed:1, tickParity:0
 };
 
 // ════════════════════════════════════════════════════════════
-// CARD DATA & HAND ENGINE
+// RANDOM EFFECTS DECK
+// type 'timer' = app-enforced; type 'honor' = display only
 // ════════════════════════════════════════════════════════════
-var RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+var EFFECTS=[
+  {id:'suddenDeath',    name:'Sudden Death',     icon:'\u26a1', type:'timer'},
+  {id:'overtime',       name:'Overtime',         icon:'\u23f1', type:'timer'},
+  {id:'lightning',      name:'Lightning Round',  icon:'\ud83c\udf29', type:'timer'},
+  {id:'rapidFire',      name:'Rapid Fire',       icon:'\u23e9', type:'timer'},
+  {id:'slowMotion',     name:'Slow Motion',      icon:'\ud83d\udc22', type:'timer'},
+  {id:'timeBank',       name:'Time Bank',        icon:'\ud83c\udfe6', type:'timer'},
+  {id:'topsyTurvy',     name:'Topsy-Turvy',      icon:'\ud83d\udd04', type:'honor'},
+  {id:'flushFrenzy',    name:'Flush Frenzy',     icon:'\ud83d\udca7', type:'honor'},
+  {id:'maxFiveSwaps',   name:'Five Swaps Max',   icon:'\u270b', type:'honor'},
+  {id:'pairsPoison',    name:'Pairs Are Poison', icon:'\u2620', type:'honor'},
+  {id:'photoFinish',    name:'Photo Finish',     icon:'\ud83d\udcf8', type:'honor'},
+  {id:'doubleDown',     name:'Double Down',      icon:'\u2716', type:'honor'},
+  {id:'suitWar',        name:'Suit War',         icon:'\u2694', type:'honor',
+    detail:function(){var s=SUITS[Math.floor(Math.random()*4)];return SUIT_SYM[s]+' trump';}},
+  {id:'highRoller',     name:'High Roller',      icon:'\ud83d\udc8e', type:'honor'},
+  {id:'greatEqualizer', name:'Great Equalizer',  icon:'\u2696', type:'honor'},
+  {id:'mirrorMatch',    name:'Mirror Match',     icon:'\ud83e\ude9e', type:'honor'},
+  {id:'aceHunter',      name:'Ace Hunter',       icon:'\ud83c\udd70', type:'honor'},
+  {id:'comebackKid',    name:'Comeback Kid',     icon:'\ud83d\udd25', type:'honor'},
+  {id:'wildCard',       name:'Wild Card',        icon:'\ud83c\udccf', type:'honor',
+    detail:function(){var r=RANKS[Math.floor(Math.random()*13)];return r+'s wild';}},
+  {id:'pacifist',       name:'Pacifist',         icon:'\u262e', type:'honor'},
+  {id:'siphon',         name:'Siphon',           icon:'\ud83e\uddf2', type:'honor'},
+  {id:'doubleOrNothing',name:'Double or Nothing',icon:'\ud83c\udfb2', type:'honor'}
+];
+
+function pickEffect(){
+  var e=EFFECTS[Math.floor(Math.random()*EFFECTS.length)];
+  return { id:e.id, name:e.name, icon:e.icon, type:e.type, detail:(e.detail?e.detail():'') };
+}
+
+// effect text line in each player's panel
+function updateEffectLines(eff){
+  var ids=['eff1','eff2','eff3','eff4'];
+  for(var i=0;i<4;i++){
+    var el=document.getElementById(ids[i]);
+    if(!el) continue;
+    if(eff){
+      el.style.display='block';
+      el.textContent=eff.icon+'  '+eff.name.toUpperCase()+(eff.detail?('  \u2014  '+eff.detail):'');
+    } else {
+      el.style.display='none';
+      el.textContent='';
+    }
+  }
+}
+
+// animated effect card draw + flip
+function showEffectCard(eff){
+  var card=document.getElementById('effectCard');
+  var target=(G.numPlayers>=3)
+    ? document.getElementById('effect-slot-centre')
+    : document.getElementById('effect-slot-cards');
+  if(card.parentNode!==target) target.appendChild(card);
+
+  card.querySelector('.ef-icon').textContent=eff.icon;
+  card.querySelector('.ef-name').textContent=eff.name;
+
+  // restart entrance + flip animation
+  card.classList.remove('flipped');
+  card.classList.remove('show');
+  void card.offsetWidth; // force reflow so animation replays
+  card.classList.add('show');
+  setTimeout(function(){ card.classList.add('flipped'); }, 450);
+}
+
+function hideEffect(){
+  var card=document.getElementById('effectCard');
+  card.classList.remove('show');
+  card.classList.remove('flipped');
+  updateEffectLines(null);
+}
 var SUITS=['S','H','D','C'];
 var RED_S={H:1,D:1};
 var SUIT_SYM={S:'\u2660',H:'\u2665',D:'\u2666',C:'\u2663'};
@@ -649,6 +799,14 @@ function sizeSidePanels(){
 // ════════════════════════════════════════════════════════════
 function drawHand(){
   if(G.paused) return;
+
+  // capture Time Bank carryover from the round that just ended
+  if(G.effect && G.effect.id==='timeBank'){
+    G.carryover=[G.rem[0],G.rem[1],G.rem[2],G.rem[3]];
+  } else {
+    G.carryover=[0,0,0,0];
+  }
+
   G.round++;
   updateRoundCount();
 
@@ -667,6 +825,17 @@ function drawHand(){
 
   document.getElementById('centre-round').textContent='Round '+G.round;
   document.getElementById('hint').style.display='none';
+
+  // draw a random effect for this round (if enabled)
+  if(G.effectsOn){
+    G.effect=pickEffect();
+    updateEffectLines(G.effect);
+    showEffectCard(G.effect);
+  } else {
+    G.effect=null;
+    updateEffectLines(null);
+    hideEffect();
+  }
 
   if(G.numPlayers<3){
     document.getElementById('cards-wrap').style.display='flex';
@@ -688,7 +857,6 @@ function renderCards(){
 window.addEventListener('resize',function(){
   renderCards();
   sizeSidePanels();
-  applyModeUI();
 });
 
 // ════════════════════════════════════════════════════════════
@@ -710,14 +878,42 @@ function activePlayers(){var a=[];for(var p=1;p<=G.numPlayers;p++)a.push(p);retu
 function startRoundTimers(){
   stopInterval();
   var ap=activePlayers();
-  for(var i=0;i<ap.length;i++){G.rem[ap[i]-1]=G.base[ap[i]-1];G.playerPaused[ap[i]-1]=false;updateTimerDisplay(ap[i]);}
+  var eff=G.effect;
+  for(var i=0;i<ap.length;i++){
+    var p=ap[i], idx=p-1;
+    // base time plus any Time Bank carryover paid out this round
+    var t=G.base[idx]+(G.carryover[idx]||0);
+    if(eff){
+      if(eff.id==='suddenDeath') t=30;
+      else if(eff.id==='lightning') t=15;
+      else if(eff.id==='overtime') t=G.base[idx]+(G.carryover[idx]||0)+30;
+    }
+    G.rem[idx]=t;
+    G.playerPaused[idx]=false;
+    updateTimerDisplay(p);
+  }
+  // tick speed: Rapid Fire = 2x, Slow Motion = 0.5x, else normal
+  G.tickSpeed=(eff&&eff.id==='rapidFire')?2:((eff&&eff.id==='slowMotion')?0.5:1);
+  G.tickParity=0;
   G.running=true;G.iv=setInterval(tickAll,1000);
 }
 function stopInterval(){if(G.iv)clearInterval(G.iv);G.iv=null;G.running=false;}
 function tickAll(){
   if(G.paused) return;
+  // Slow Motion: only decrement every other tick
+  if(G.tickSpeed===0.5){
+    G.tickParity=(G.tickParity+1)%2;
+    if(G.tickParity!==0) return;
+  }
+  var dec=(G.tickSpeed===2)?2:1;
   var ap=activePlayers();
-  for(var i=0;i<ap.length;i++){var p=ap[i];if(!G.playerPaused[p-1]&&G.rem[p-1]>0){G.rem[p-1]--;updateTimerDisplay(p);}}
+  for(var i=0;i<ap.length;i++){
+    var p=ap[i];
+    if(!G.playerPaused[p-1]&&G.rem[p-1]>0){
+      G.rem[p-1]=Math.max(0,G.rem[p-1]-dec);
+      updateTimerDisplay(p);
+    }
+  }
 }
 function adj(player,delta){
   var i=player-1;
@@ -776,6 +972,9 @@ document.getElementById('menuReset').addEventListener('click',function(){
   setHandDisplay('p3Text','p3Dash','p3Cards','\u2014','');
   setHandDisplay('p4Text','p4Dash','p4Cards','\u2014','');
   document.getElementById('centre-round').textContent='Round 0';
+  // clear any active effect (keep the on/off toggle as the user set it)
+  G.effect=null;G.carryover=[0,0,0,0];G.tickSpeed=1;G.tickParity=0;
+  hideEffect();
   updateRoundCount();updateScoreGrid();
 });
 
@@ -783,6 +982,16 @@ document.getElementById('menuPlayers').addEventListener('click',function(){
   G.numPlayers=G.numPlayers>=4?2:G.numPlayers+1;
   document.getElementById('playersStatus').textContent=G.numPlayers+' Players';
   applyPlayerCountUI();
+});
+
+document.getElementById('menuEffects').addEventListener('click',function(){
+  G.effectsOn=!G.effectsOn;
+  document.getElementById('effectsStatus').textContent='Effects: '+(G.effectsOn?'On':'Off');
+  if(!G.effectsOn){
+    // turning off clears the current effect display immediately
+    G.effect=null;G.carryover=[0,0,0,0];G.tickSpeed=1;G.tickParity=0;
+    hideEffect();
+  }
 });
 
 // ════════════════════════════════════════════════════════════
